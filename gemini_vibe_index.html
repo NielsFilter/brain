@@ -84,7 +84,7 @@
     // --- State Variables ---
     let mouseX = -1; // Use -1 to indicate the mouse is outside the canvas
     let mouseY = -1;
-    const neuronCount = 1100; // Doubled for a denser look
+    const neuronCount = 1800; // Doubled for a denser look
     const leftNeurons = [];
     const rightNeurons = [];
 
@@ -151,27 +151,32 @@
     function createHemisphere(count, side) {
         const neurons = [];
         const sign = (side === 'left') ? -1 : 1;
-        const wideningFactor = 2.0; // Increase for more width on the outside
+        const wideningFactor = 2.0;
+        // Random phase for each hemisphere for more organic look
+        const phase1 = 0.1 * Math.PI * 2.1;
+        const phase2 = 12  * Math.PI * 2.1; //Math.random()
 
         for (let i = 0; i < count; i++) {
-            // Use polar coordinates to distribute points within a semi-ellipse
-            const angle = (Math.random() * Math.PI) - (Math.PI / 2); // Angle from -90 to +90 degrees
-            const radiusScalar = Math.sqrt(Math.random()); // Use sqrt for a more even distribution
+            const angle = (Math.random() * Math.PI) - (Math.PI / 2);
+            const radiusScalar = Math.sqrt(Math.random());
 
             // Egg shape: scale horizontal radius based on vertical position
-            // At the top (angle ~ -PI/2), factor is 0.8; at bottom (angle ~ PI/2), factor is 1.15
-            const verticalFactor = 0.8 + 0.35 * ((Math.sin(angle) + 1) / 2); // Range: 0.8 to 1.15
-
+            // Make bottom wider: verticalFactor increases more at the bottom
+            const sinVal = Math.sin(angle);
+            const verticalFactor = 0.8 + 0.25 * ((sinVal + 1) / 2) + 0.25 * Math.pow((sinVal + 1) / 2, 2); // More width at bottom
             let localRadiusX = hemisphereRadiusX * verticalFactor;
-            if (side === 'left' && Math.cos(angle) > 0) {
-                localRadiusX = hemisphereRadiusX * wideningFactor * verticalFactor;
-            } else if (side === 'right' && Math.cos(angle) > 0) {
-                localRadiusX = hemisphereRadiusX * wideningFactor * verticalFactor;
+            let localRadiusY = hemisphereRadiusY;
+
+            // Subtle cloudiness: smaller amplitude for bumps
+            let cloudBump = 0;
+            if ((side === 'left' && Math.cos(angle) > 0) || (side === 'right' && Math.cos(angle) > 0)) {
+                cloudBump = 0.045 * Math.sin(5 * angle + phase1) + 0.025 * Math.sin(9 * angle + phase2);
+                localRadiusX = hemisphereRadiusX * wideningFactor * verticalFactor * (1 + cloudBump * radiusScalar);
+                localRadiusY = hemisphereRadiusY * (1 + cloudBump * radiusScalar * 0.5);
             }
 
-            // Calculate x and y to fill the entire semi-ellipse shape.
             const x = centerX + sign * (Math.cos(angle) * localRadiusX * radiusScalar);
-            const y = centerY + Math.sin(angle) * hemisphereRadiusY * radiusScalar;
+            const y = centerY + Math.sin(angle) * localRadiusY * radiusScalar;
             
             neurons.push(new Neuron(x, y));
         }
