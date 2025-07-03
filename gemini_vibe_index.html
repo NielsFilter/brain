@@ -147,15 +147,24 @@
     function createHemisphere(count, side) {
         const neurons = [];
         const sign = (side === 'left') ? -1 : 1;
+        const wideningFactor = 2.0; // Increase for more width on the outside
 
         for (let i = 0; i < count; i++) {
             // Use polar coordinates to distribute points within a semi-ellipse
             const angle = (Math.random() * Math.PI) - (Math.PI / 2); // Angle from -90 to +90 degrees
             const radiusScalar = Math.sqrt(Math.random()); // Use sqrt for a more even distribution
 
+            // Widen only the outer edge of each hemisphere
+            let localRadiusX = hemisphereRadiusX;
+            if (side === 'left' && Math.cos(angle) > 0) {
+                localRadiusX = hemisphereRadiusX * wideningFactor;
+            } else if (side === 'right' && Math.cos(angle) > 0) {
+                localRadiusX = hemisphereRadiusX * wideningFactor;
+            }
+
             // Calculate x and y to fill the entire semi-ellipse shape.
             // The flat side of the semi-ellipse will be along the canvas's vertical center line.
-            const x = centerX + sign * (Math.cos(angle) * hemisphereRadiusX * radiusScalar);
+            const x = centerX + sign * (Math.cos(angle) * localRadiusX * radiusScalar);
             const y = centerY + Math.sin(angle) * hemisphereRadiusY * radiusScalar;
             
             neurons.push(new Neuron(x, y));
