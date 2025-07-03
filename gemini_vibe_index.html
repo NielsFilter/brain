@@ -66,27 +66,19 @@
     const ctx = canvas.getContext('2d');
     const modal = document.getElementById('navigationModal');
     const modalText = document.getElementById('modalText');
-
-    // --- Canvas and Shape Sizing ---
-    // Make the canvas responsive to the window size
-    canvas.height = window.innerHeight * 0.85;
-    canvas.width = canvas.height;
-
-    // canvas.width = window.innerWidth > 800 ? 800 : window.innerWidth * 0.95;
-    // canvas.height = window.innerHeight > 600 ? 600 : window.innerHeight * 0.95;
-
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const verticalMargin = canvas.height * 0.125; // 2.5% margin top and bottom
-    const hemisphereRadiusX = canvas.width * 0.22;
-    const hemisphereRadiusY = (canvas.height / 2) - verticalMargin + canvas.height * 0.12; // Make hemispheres taller
+    
+    let centerX = 0;
+    let centerY = 0;
+    let verticalMargin = 0; // 2.5% margin top and bottom
+    let hemisphereRadiusX = 0;
+    let hemisphereRadiusY = 0;
+    let mouseX = -1;
+    let mouseY = -1;
 
     // --- State Variables ---
-    let mouseX = -1; // Use -1 to indicate the mouse is outside the canvas
-    let mouseY = -1;
-    const neuronCount = 1800; // Doubled for a denser look
-    const leftNeurons = [];
-    const rightNeurons = [];
+    let neuronCount = 1800; // Doubled for a denser look
+    let leftNeurons = [];
+    let rightNeurons = [];
 
     // --- Colors ---
     const baseColorLeft = 'rgba(0, 150, 255, 0.6)';
@@ -284,18 +276,42 @@
     
     // Handle window resizing
     window.addEventListener('resize', () => {
-        canvas.width = window.innerWidth > 800 ? 800 : window.innerWidth * 0.95;
-        canvas.height = window.innerHeight > 600 ? 600 : window.innerHeight * 0.95;
-        // This is a simplified resize handler. For a more robust solution,
-        // you would need to regenerate the neuron positions based on the new size.
+        initializeBrain();
     });
 
+    function initializeBrain() {
+        
+        // --- Canvas and Shape Sizing ---
+        // Make the canvas responsive to the window size
+        canvas.height = Math.min(window.innerHeight, window.innerWidth) * 0.9;
+        canvas.width = canvas.height;
 
-    // --- Initialization ---
-    // Create the neurons for both hemispheres and start the animation
-    leftNeurons.push(...createHemisphere(neuronCount, 'left'));
-    rightNeurons.push(...createHemisphere(neuronCount, 'right'));
-    animate();
+        // canvas.width = window.innerWidth > 800 ? 800 : window.innerWidth * 0.95;
+        // canvas.height = window.innerHeight > 600 ? 600 : window.innerHeight * 0.95;
+
+        centerX = canvas.width / 2;
+        centerY = canvas.height / 2;
+        verticalMargin = canvas.height * 0.125; // 2.5% margin top and bottom
+        hemisphereRadiusX = canvas.width * 0.22;
+        hemisphereRadiusY = (canvas.height / 2) - verticalMargin + canvas.height * 0.12; // Make hemispheres taller
+
+        // --- State Variables ---
+        mouseX = -1; // Use -1 to indicate the mouse is outside the canvas
+        mouseY = -1;
+        neuronCount = 1800; // Doubled for a denser look
+
+        // Rebuild neurons
+        leftNeurons.length = 0;
+        rightNeurons.length = 0;
+
+        // Create the neurons for both hemispheres and start the animation
+        leftNeurons.push(...createHemisphere(neuronCount, 'left'));
+        rightNeurons.push(...createHemisphere(neuronCount, 'right'));
+        animate();
+    }
+
+    // Initialize the brain and start the animation
+    this.initializeBrain();
 
 </script>
 </body>
