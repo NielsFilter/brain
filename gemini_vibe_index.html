@@ -66,7 +66,7 @@
     const ctx = canvas.getContext('2d');
     const modal = document.getElementById('navigationModal');
     const modalText = document.getElementById('modalText');
-    
+
     let centerX = 0;
     let centerY = 0;
     let verticalMargin = 0; // 2.5% margin top and bottom
@@ -76,7 +76,7 @@
     let mouseY = -1;
 
     // --- State Variables ---
-    let neuronCount = 1800; // Doubled for a denser look
+    let neuronCount = 0; // Doubled for a denser look
     let leftNeurons = [];
     let rightNeurons = [];
 
@@ -99,7 +99,7 @@
             this.x = x;
             this.y = y;
             // Increased radius for slightly bigger neurons
-            this.radius = Math.random() * 1.7 + 1.5;
+            this.radius = Math.random() * 0.4 * Math.floor(canvas.height / 100)  + 1;
             // Velocity for the animation
             this.vx = (Math.random() - 0.5) * 0.5;
             this.vy = (Math.random() - 0.5) * 0.5;
@@ -182,7 +182,8 @@
      */
     function drawConnectors(neurons, color) {
         ctx.strokeStyle = color;
-        ctx.lineWidth = 0.4;
+        ctx.lineWidth =  ((Math.floor(canvas.height / 100)) - 2) * 0.1; // Adjust line width based on canvas height
+        console.log("Drawing connectors for " + neurons.length + " neurons with width: " + ctx.lineWidth);
         for (let i = 0; i < neurons.length; i++) {
             for (let j = i + 1; j < neurons.length; j++) {
                 const distance = Math.hypot(neurons[i].x - neurons[j].x, neurons[i].y - neurons[j].y);
@@ -198,10 +199,13 @@
         }
     }
 
+    let frameCount = 0;
+
     /**
      * The main animation loop, called for every frame.
      */
     function animate() {
+      //  console.log("Frame: " + frameCount++);
         // Clear the canvas for the next frame
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -280,7 +284,8 @@
     });
 
     function initializeBrain() {
-        
+        console.log("START Initializing brain... Timestamp: " + new Date().toLocaleTimeString());
+        frameCount = 0;
         // --- Canvas and Shape Sizing ---
         // Make the canvas responsive to the window size
         canvas.height = Math.min(window.innerHeight, window.innerWidth) * 0.9;
@@ -298,7 +303,7 @@
         // --- State Variables ---
         mouseX = -1; // Use -1 to indicate the mouse is outside the canvas
         mouseY = -1;
-        neuronCount = 1800; // Doubled for a denser look
+        neuronCount = canvas.height;
 
         // Rebuild neurons
         leftNeurons.length = 0;
@@ -308,10 +313,11 @@
         leftNeurons.push(...createHemisphere(neuronCount, 'left'));
         rightNeurons.push(...createHemisphere(neuronCount, 'right'));
         animate();
+        console.log("DONE Initializing brain... Timestamp: " + new Date().toLocaleTimeString());
     }
 
     // Initialize the brain and start the animation
-    this.initializeBrain();
+    initializeBrain();
 
 </script>
 </body>
