@@ -69,13 +69,17 @@
 
     // --- Canvas and Shape Sizing ---
     // Make the canvas responsive to the window size
-    canvas.width = window.innerWidth > 800 ? 800 : window.innerWidth * 0.95;
-    canvas.height = window.innerHeight > 600 ? 600 : window.innerHeight * 0.95;
+    canvas.height = window.innerHeight * 0.85;
+    canvas.width = canvas.height;
+
+    // canvas.width = window.innerWidth > 800 ? 800 : window.innerWidth * 0.95;
+    // canvas.height = window.innerHeight > 600 ? 600 : window.innerHeight * 0.95;
 
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
+    const verticalMargin = canvas.height * 0.025; // 2.5% margin top and bottom
     const hemisphereRadiusX = canvas.width * 0.22;
-    const hemisphereRadiusY = canvas.height * 0.6; // Increased for a taller hemisphere
+    const hemisphereRadiusY = (canvas.height / 2) - verticalMargin + canvas.height * 0.12; // Make hemispheres taller
 
     // --- State Variables ---
     let mouseX = -1; // Use -1 to indicate the mouse is outside the canvas
@@ -154,16 +158,18 @@
             const angle = (Math.random() * Math.PI) - (Math.PI / 2); // Angle from -90 to +90 degrees
             const radiusScalar = Math.sqrt(Math.random()); // Use sqrt for a more even distribution
 
-            // Widen only the outer edge of each hemisphere
-            let localRadiusX = hemisphereRadiusX;
+            // Egg shape: scale horizontal radius based on vertical position
+            // At the top (angle ~ -PI/2), factor is 0.8; at bottom (angle ~ PI/2), factor is 1.15
+            const verticalFactor = 0.8 + 0.35 * ((Math.sin(angle) + 1) / 2); // Range: 0.8 to 1.15
+
+            let localRadiusX = hemisphereRadiusX * verticalFactor;
             if (side === 'left' && Math.cos(angle) > 0) {
-                localRadiusX = hemisphereRadiusX * wideningFactor;
+                localRadiusX = hemisphereRadiusX * wideningFactor * verticalFactor;
             } else if (side === 'right' && Math.cos(angle) > 0) {
-                localRadiusX = hemisphereRadiusX * wideningFactor;
+                localRadiusX = hemisphereRadiusX * wideningFactor * verticalFactor;
             }
 
             // Calculate x and y to fill the entire semi-ellipse shape.
-            // The flat side of the semi-ellipse will be along the canvas's vertical center line.
             const x = centerX + sign * (Math.cos(angle) * localRadiusX * radiusScalar);
             const y = centerY + Math.sin(angle) * hemisphereRadiusY * radiusScalar;
             
