@@ -81,19 +81,40 @@
     let rightNeurons = [];
 
     // --- Colors ---
-    const baseColorLeft = 'rgba(0, 150, 255, 0.6)';
+    // Left hemisphere: blue to green
+    const baseColorLeft1 = { r: 0, g: 150, b: 255 }; // blue
+    const baseColorLeft2 = { r: 0, g: 255, b: 120 }; // green
+    // Right hemisphere: orange to red
+    const baseColorRight1 = { r: 255, g: 185, b: 10 }; // orange
+    const baseColorRight2 = { r: 205, g: 0, b: 0 }; // red
     const hoverColorLeft = 'rgba(120, 210, 255, 1)';
-    const baseColorRight = 'rgba(255, 100, 0, 0.6)';
     const hoverColorRight = 'rgba(255, 165, 50, 1)';
     const connectorColorLeft = 'rgba(0, 150, 255, 0.15)';
     const connectorColorRight = 'rgba(255, 100, 0, 0.15)';
+
+    // Helper to interpolate between two colors
+    function lerpColor(c1, c2, t) {
+        return {
+            r: Math.round(c1.r + (c2.r - c1.r) * t),
+            g: Math.round(c1.g + (c2.g - c1.g) * t),
+            b: Math.round(c1.b + (c2.b - c1.b) * t)
+        };
+    }
+    // Add highlight alpha for hover effect
+    function colorToRgba(c, alpha=0.8) {
+        return `rgba(${c.r},${c.g},${c.b},${alpha})`;
+    }
+    function colorToRgbaHighlight(c) {
+        // Brighter, more opaque
+        return `rgba(${Math.min(255, Math.round(c.r * 1.2))},${Math.min(255, Math.round(c.g * 1.2))},${Math.min(255, Math.round(c.b * 1.2))},1)`;
+    }
 
     /**
      * Represents a single neuron (a dot).
      * It handles its own position, velocity, and drawing logic.
      */
     class Neuron {
-        constructor(x, y) {
+        constructor(x, y, color = null) {
             this.originX = x;
             this.originY = y;
             this.x = x;
@@ -101,17 +122,19 @@
             // Increased radius for slightly bigger neurons
             this.radius = Math.random() * 0.4 * Math.floor(canvas.height / 100)  + 1;
             // Velocity for the animation
-            this.vx = (Math.random() - 0.5) * 0.5;
-            this.vy = (Math.random() - 0.5) * 0.5;
+            var scalingFactor = canvasHeightFactor();
+            this.vx = (Math.random() - 0.5) * 0.3 * scalingFactor;
+            this.vy = (Math.random() - 0.5) * 0.3 * scalingFactor;
             // Max distance it can travel from its origin
-            this.maxDist = Math.random() * 8 + 4;
+            this.maxDist = (Math.random() * 6 + 2);
+            this.customColor = color; // For per-neuron color
         }
 
         /**
          * Updates the neuron's position for the animation effect.
          */
-        update() {
-            this.x += this.vx;
+        updatePosition() {
+            this.x += this.vx; // Add some randomness to the movement
             this.y += this.vy;
 
             const dist = Math.hypot(this.x - this.originX, this.y - this.originY);
@@ -126,11 +149,20 @@
          * Draws the neuron on the canvas with a given color.
          * @param {string} color - The fill color for the neuron.
          */
-        draw(color) {
+        draw(isHover = false) {
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-            ctx.fillStyle = color;
+            
+            if(isHover) {
+                ctx.fillStyle = colorToRgbaHighlight(this.customColor);
+            } else // if (this.customColor) {
+                ctx.fillStyle = colorToRgba(this.customColor);
             ctx.fill();
+
+            if(isHover || Math.round(Math.random() * 10) % 2 == 0) {
+                // Randomly update position for a more dynamic effect
+                this.updatePosition();
+            }
         }
     }
 
@@ -144,7 +176,6 @@
         const neurons = [];
         const sign = (side === 'left') ? -1 : 1;
         const wideningFactor = 2.0;
-        // Random phase for each hemisphere for more organic look
         const phase1 = 0.1 * Math.PI * 2.1;
         const phase2 = 12  * Math.PI * 2.1; //Math.random()
 
@@ -169,8 +200,16 @@
 
             const x = centerX + sign * (Math.cos(angle) * localRadiusX * radiusScalar);
             const y = centerY + Math.sin(angle) * localRadiusY * radiusScalar;
-            
-            neurons.push(new Neuron(x, y));
+            // Assign a color for each neuron based on hemisphere
+            let color = null;
+            if (side === 'left') {
+                const t = Math.random();
+                color = lerpColor(baseColorLeft1, baseColorLeft2, t);
+            } else if (side === 'right') {
+                const t = Math.random();
+                color = lerpColor(baseColorRight1, baseColorRight2, t);
+            }
+            neurons.push(new Neuron(x, y, color));
         }
         return neurons;
     }
@@ -180,20 +219,55 @@
      * @param {Neuron[]} neurons - The array of neurons to connect.
      * @param {string} color - The color of the connector lines.
      */
-    function drawConnectors(neurons, color) {
-        ctx.strokeStyle = color;
-        ctx.lineWidth =  ((Math.floor(canvas.height / 100)) - 2) * 0.1; // Adjust line width based on canvas height
-        console.log("Drawing connectors for " + neurons.length + " neurons with width: " + ctx.lineWidth);
-        for (let i = 0; i < neurons.length; i++) {
-            for (let j = i + 1; j < neurons.length; j++) {
-                const distance = Math.hypot(neurons[i].x - neurons[j].x, neurons[i].y - neurons[j].y);
+    function drawConnectors(neurons, color, side) {
+        if (side === 'left' || side === 'right') {
+            ctx.lineWidth = ((Math.floor(canvas.height / 100)) - 2) * 0.1;
+            for (let i = 0; i < neurons.length; i++) {
+                for (let j = i + 1; j < neurons.length; j+=2) {
+                    const distance = Math.hypot(neurons[i].x - neurons[j].x, neurons[i].y - neurons[j].y);
+                    if (distance < 55) {
+                        // Average the two neuron colors
+                        let c1, c2;
+                        if (side === 'left') {
+                            c1 = neurons[i].customColor || baseColorLeft1;
+                            c2 = neurons[j].customColor || baseColorLeft2;
+                        } else {
+                            c1 = neurons[i].customColor || baseColorRight1;
+                            c2 = neurons[j].customColor || baseColorRight2;
+                        }
+                        const avgColor = {
+                            r: Math.round((c1.r + c2.r) / 2),
+                            g: Math.round((c1.g + c2.g) / 2),
+                            b: Math.round((c1.b + c2.b) / 2)
+                        };
 
-                // Connect if they are close enough, creating the web effect
-                if (distance < 55) {
-                    ctx.beginPath();
-                    ctx.moveTo(neurons[i].x, neurons[i].y);
-                    ctx.lineTo(neurons[j].x, neurons[j].y);
-                    ctx.stroke();
+                        
+                        let alpha = 0.4;
+                        if(canvas.height < 600) {
+                            alpha = 0.25;
+                        } 
+
+                        ctx.strokeStyle = colorToRgba(avgColor, 0.48);
+                        ctx.beginPath();
+                        ctx.moveTo(neurons[i].x, neurons[i].y);
+                        ctx.lineTo(neurons[j].x, neurons[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        } else {
+            // fallback (should not be used)
+            ctx.strokeStyle = color;
+            ctx.lineWidth = ((Math.floor(canvas.height / 100)) - 2) * 0.1;
+            for (let i = 0; i < neurons.length; i++) {
+                for (let j = i + 1; j < neurons.length; j++) {
+                    const distance = Math.hypot(neurons[i].x - neurons[j].x, neurons[i].y - neurons[j].y);
+                    if (distance < 55) {
+                        ctx.beginPath();
+                        ctx.moveTo(neurons[i].x, neurons[i].y);
+                        ctx.lineTo(neurons[j].x, neurons[j].y);
+                        ctx.stroke();
+                    }
                 }
             }
         }
@@ -205,7 +279,6 @@
      * The main animation loop, called for every frame.
      */
     function animate() {
-      //  console.log("Frame: " + frameCount++);
         // Clear the canvas for the next frame
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -213,22 +286,19 @@
         const isHoveringLeft = mouseX > 0 && mouseX < centerX;
         const isHoveringRight = mouseX >= centerX && mouseX < canvas.width;
 
-        // Determine colors based on hover state
-        const currentLeftColor = isHoveringLeft ? hoverColorLeft : baseColorLeft;
-        const currentRightColor = isHoveringRight ? hoverColorRight : baseColorRight;
+        // // Determine colors based on hover state
+        // const currentLeftColor = isHoveringLeft ? hoverColorLeft : baseColorLeft1; // TODO: baseColorLeft2 ??
+        // const currentRightColor = isHoveringRight ? hoverColorRight : baseColorRight1; // TODO: baseColorRight2 ??
         
         // --- Draw all components ---
-        drawConnectors(leftNeurons, connectorColorLeft);
-        drawConnectors(rightNeurons, connectorColorRight);
-
+        drawConnectors(leftNeurons, connectorColorLeft, 'left');
+        drawConnectors(rightNeurons, connectorColorRight, 'right');
+        // --- Draw neurons with highlight if hovered ---
         leftNeurons.forEach(neuron => {
-            neuron.update();
-            neuron.draw(currentLeftColor);
+            neuron.draw(isHoveringLeft);
         });
-
         rightNeurons.forEach(neuron => {
-            neuron.update();
-            neuron.draw(currentRightColor);
+                neuron.draw(isHoveringRight);
         });
 
         // Request the next frame
@@ -283,12 +353,17 @@
         initializeBrain();
     });
 
+    function canvasHeightFactor() {
+        const minH = 500; // very small
+        const maxH = 1500; // very large
+        return 1 + Math.min(1, Math.max(0, (canvas.height - minH) / (maxH - minH)));
+    }
+
     function initializeBrain() {
-        console.log("START Initializing brain... Timestamp: " + new Date().toLocaleTimeString());
         frameCount = 0;
         // --- Canvas and Shape Sizing ---
         // Make the canvas responsive to the window size
-        canvas.height = Math.min(window.innerHeight, window.innerWidth) * 0.9;
+        canvas.height = Math.max(450, Math.min(window.innerHeight, window.innerWidth) * 0.9);
         canvas.width = canvas.height;
 
         // canvas.width = window.innerWidth > 800 ? 800 : window.innerWidth * 0.95;
@@ -303,7 +378,7 @@
         // --- State Variables ---
         mouseX = -1; // Use -1 to indicate the mouse is outside the canvas
         mouseY = -1;
-        neuronCount = canvas.height;
+        neuronCount = Math.ceil(canvas.height * 1.1) - 100;
 
         // Rebuild neurons
         leftNeurons.length = 0;
@@ -313,7 +388,6 @@
         leftNeurons.push(...createHemisphere(neuronCount, 'left'));
         rightNeurons.push(...createHemisphere(neuronCount, 'right'));
         animate();
-        console.log("DONE Initializing brain... Timestamp: " + new Date().toLocaleTimeString());
     }
 
     // Initialize the brain and start the animation
